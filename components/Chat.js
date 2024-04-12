@@ -1,58 +1,115 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity } from "react-native";
+import { StyleSheet, Platform, KeyboardAvoidingView, View } from "react-native";
+import {
+  GiftedChat,
+  Bubble,
+  Day,
+  SystemMessage,
+} from "react-native-gifted-chat";
 import Background from "./Background";
 
+// Chat component with route & navigation props
 const Chat = ({ route, navigation }) => {
-  const { message } = route.params;
-  const [text, setText] = useState(message);
+  const [messages, setMessages] = useState([]);
+  const { name } = route.params;
 
+  // Set the title of the screen 
   useEffect(() => {
-    if (route.params?.message) {
-      setText(route.params.message);
-      navigation.setOptions({ title: route.params.message });
-    }
-  }, [route.params?.message]);
+    navigation.setOptions({ title: name });
+
+    // Set the initial messages
+    setMessages([
+      {
+        _id: 1,
+        text: "Hello developer",
+        createdAt: new Date(),
+        user: {
+          _id: 2,
+          name: "React Native",
+          avatar: "https://placeimg.com/140/140/any",
+        },
+      },
+
+      {
+        _id: 2,
+        text: "This is a system message",
+        createdAt: new Date(),
+        system: true,
+      },
+    ]);
+  }, []);
+
+  // Function to send messages
+  const onSend = (newMessages) => {
+    setMessages((previousMessages) =>
+      GiftedChat.append(previousMessages, newMessages)
+    );
+  };
+
+  // Render the messages in Bubbles
+  const renderBubble = (props) => {
+    return (
+      <Bubble
+        {...props}
+        wrapperStyle={{
+          right: {
+            backgroundColor: "#007AFF",
+          },
+          left: {
+            backgroundColor: "#b73eeb",
+          },
+        }}
+        textStyle={{
+          left: {
+            color: "#FFFFFF",
+          },
+        }}
+      />
+    );
+  };
+
+  // style the date to white
+  const renderDay = (props) => (
+    <Day {...props} textStyle={{ color: "white" }} />
+  );
+
+// style the system message to white
+  const renderSystemMessage = (props) => (
+    <SystemMessage {...props} textStyle={{ color: "white" }} />
+  );
 
   return (
-    <Background>
-      <Text>Hello Chat!</Text>
-      <TextInput
-        style={styles.textInput}
-        value={text}
-        onChangeText={setText}
-        placeholder="Type your message here"
-      />
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => 
-          // navigation.setOptions({ title: message });
-          navigation.navigate("Start", { message: text })}
-      >
-        <Text style={styles.buttonText}>Send</Text>
-      </TouchableOpacity>
+
+    // Background component & container wrapper
+    <Background> 
+
+      <View style={styles.textContainer}>
+        <GiftedChat
+          messages={messages}
+          renderBubble={renderBubble}
+          renderDay={renderDay}
+          renderSystemMessage={renderSystemMessage}
+          accessible={true}
+          accessibilityLabel="send"
+          accessibilityHint="Sends a message"
+          accessibilityRole="button"
+          onSend={(messages) => onSend(messages)}
+          user={{
+            _id: 1,
+          }}
+        />
+      </View>
+      {Platform.OS === "ios"?<KeyboardAvoidingView behavior="padding" />: null}
+      {Platform.OS === "android" ? <KeyboardAvoidingView /> : null}
     </Background>
   );
 };
 
 const styles = StyleSheet.create({
-  textInput: {
-    width: "88%",
-    padding: 15,
-    borderWidth: 1,
-    borderRadius: 10,
-    marginTop: 15,
-    marginBottom: 15,
-    backgroundColor: "white",
-  },
-  button: {
-    backgroundColor: "#007BFF",
+  textContainer: {
+    flex: 1,
     padding: 10,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "white",
-    textAlign: "center",
+    borderRadius: 5,
   },
 });
 

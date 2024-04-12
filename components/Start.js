@@ -1,35 +1,41 @@
-import { useState, useEffect } from "react";
-import { StyleSheet, Text, TouchableOpacity, TextInput } from "react-native";
+import { useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from "react-native";
 import Background from "./Background";
 
-const Start = ({ navigation, route }) => {
-  const [message, setMessage] = useState("");
+// Start component with navigation prop
+const Start = ({ navigation }) => {
+  const [name, setName] = useState("");
 
-  useEffect(() => {
-    if (route.params?.message) {
-      setMessage(route.params.message);
-      navigation.setOptions({ title: route.params.message });
-    }
-  }, [route.params?.message]);
 
   return (
     <Background>
-      <Text>Hello Start!!</Text>
+      <Text>Hello Start!</Text>
       <TextInput
         style={styles.textInput}
-        value={message}
-        onChangeText={setMessage}
-        placeholder="Type your message here"
+        value={name}
+        onChangeText={setName}
+        placeholder="Type here ..."
       />
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => navigation.navigate("Chat", { message: message })}
+      <TouchableOpacity 
+      title="Go to Chat"
+      style={styles.button} 
+      accessible={true}
+      accessibilityLabel="Go to Chat"
+      accessibilityHint="Navigates to Chat"
+      accessibilityRole="button"
+      onPress={() =>
+        navigation.navigate("Chat", { name })
+      }
       >
-        <Text style={styles.buttonText}>Send</Text>
+
+        <Text style={styles.buttonText}>Start</Text>
       </TouchableOpacity>
+      {Platform.OS === "ios"?<KeyboardAvoidingView behavior="padding" />: null}
+      {Platform.OS === "android" ? <KeyboardAvoidingView /> : null}
     </Background>
   );
 };
+
 
 const styles = StyleSheet.create({
   textInput: {
