@@ -7,9 +7,10 @@ import {
   SystemMessage,
 } from "react-native-gifted-chat";
 import Background from "./Background";
+import { onSnapshot, query, where, collection, addDoc, orderBy } from "firebase/firestore";
 
 // Chat component with route & navigation props
-const Chat = ({ route, navigation }) => {
+const Chat = ({ db, route, navigation }) => {
   const [messages, setMessages] = useState([]);
   const { name } = route.params;
 
@@ -17,33 +18,48 @@ const Chat = ({ route, navigation }) => {
   useEffect(() => {
     navigation.setOptions({ title: name });
 
-    // Set the initial messages
-    setMessages([
-      {
-        _id: 1,
-        text: "Hello developer",
-        createdAt: new Date(),
-        user: {
-          _id: 2,
-          name: "React Native",
-          avatar: "https://placeimg.com/140/140/any",
-        },
-      },
+    const q = query(collection(db, "messages"), orderBy("createdAt", "desc"))
+    // , where("uid", "==", userID));
+    const unsubMessages = onSnapshot(q, (docs) => {
+      let newMessages = [];
+      docs.forEach(doc => {
+        newMessages.push({ id: doc.id, ...doc.data() })
+      });
+      setMessages(newMessages);
+    });
 
-      {
-        _id: 2,
-        text: "This is a system message",
-        createdAt: new Date(),
-        system: true,
-      },
-    ]);
+    // Clean up code
+    return () => {
+      if (unsubMessages) unsubMessages();
+    }
+
+    // Set the initial messages
+  //   setMessages([
+  //     {
+  //       _id: 1,
+  //       text: "Hello developer",
+  //       createdAt: new Date(),
+  //       user: {
+  //         _id: 2,
+  //         name: "React Native",
+  //         avatar: "https://placeimg.com/140/140/any",
+  //       },
+  //     },
+
+  //     {
+  //       _id: 2,
+  //       text: "This is a system message",
+  //       createdAt: new Date(),
+  //       system: true,
+  //     },
+    // ]);
   }, []);
 
   // Function to send messages
   const onSend = (newMessages) => {
-    setMessages((previousMessages) =>
-      GiftedChat.append(previousMessages, newMessages)
-    );
+    addDoc(collection(db, "messages"), newMessages[0])
+    // setMessages((previousMessages) =>
+    //   GiftedChat.append(previousMessages, newMessages)
   };
 
   // Render the messages in Bubbles

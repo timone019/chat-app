@@ -1,10 +1,23 @@
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from "react-native";
 import Background from "./Background";
+import { getAuth, signInAnonymously} from "firebase/auth";
 
 // Start component with navigation prop
 const Start = ({ navigation }) => {
   const [name, setName] = useState("");
+  const auth = getAuth();
+
+  const signInUser = () => {
+    signInAnonymously(auth)
+    .then(result => {
+      navigation.navigate("Chat", { userID: result.user.uid, name:name});
+      Alert.alert("You have successfully signed in anonymously");
+    })
+    .catch(error => {
+      Alert.alert("Unable to sign in, please try again");
+    })
+  }
 
 
   return (
@@ -23,13 +36,12 @@ const Start = ({ navigation }) => {
       accessibilityLabel="Go to Chat"
       accessibilityHint="Navigates to Chat"
       accessibilityRole="button"
-      onPress={() =>
-        navigation.navigate("Chat", { name })
-      }
+      onPress={signInUser} 
+      // => { navigation.navigate("Chat", { name }) }
       >
 
         <Text style={styles.buttonText}>Start</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> 
       {Platform.OS === "ios"?<KeyboardAvoidingView behavior="padding" />: null}
       {Platform.OS === "android" ? <KeyboardAvoidingView /> : null}
     </Background>
