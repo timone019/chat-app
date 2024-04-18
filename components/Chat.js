@@ -102,7 +102,7 @@ const Chat = ({ db, route, navigation }) => {
     <Background
     source={background ? null : image}
     resizeMode="cover"
-    style={[styles.image, {backgroundColor: background} ]}>
+    color={background}>
     
 
       <View style={styles.textContainer}>

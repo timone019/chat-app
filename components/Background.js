@@ -1,9 +1,10 @@
+// Background.js
 import React from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const Background = ({ children }) => (
+const Background = ({ color, children }) => (
   <LinearGradient
-    colors={['lightsteelblue', '#69c4f2']}
+    colors={[color || '#FFFFFF', '#69c4f2']} // if color is null, default to '#FFFFFF'
     style={{ flex: 1 }}
   >
     {children}

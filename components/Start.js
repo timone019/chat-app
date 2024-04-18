@@ -27,7 +27,7 @@ const Start = ({ navigation }) => {
         navigation.navigate("Chat", {
           userID: result.user.uid,
           name: name,
-          background: background,
+          background: background, // pass 'background' instead of 'selectedColor'
         });
         Alert.alert("You have successfully signed in anonymously");
       })
@@ -38,7 +38,7 @@ const Start = ({ navigation }) => {
   };
 
   return (
-    <Background>
+    <Background color={background}>
       <Text>Hello Start!</Text>
       <TextInput
         style={styles.textInput}
