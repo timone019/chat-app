@@ -7,60 +7,62 @@ import {
   SystemMessage,
 } from "react-native-gifted-chat";
 import Background from "./Background";
-import { onSnapshot, query, where, collection, addDoc, orderBy } from "firebase/firestore";
+import { onSnapshot, query, collection, addDoc, orderBy } from "firebase/firestore";
 
 // Chat component with route & navigation props
 const Chat = ({ db, route, navigation }) => {
   const [messages, setMessages] = useState([]);
-  const { name } = route.params;
+  const { name, background, userID } = route.params; // extract userId and name from route params
+
+  const onSend = (newMessages) => {
+    const message = {
+   ...newMessages[0],
+   user: {
+     _id: userID, // use the userId variable
+     name: route.params.name, // use the name from route params
+   },
+ };
+     addDoc(collection(db, "messages"), message);
+   }
+  
 
   // Set the title of the screen 
   useEffect(() => {
     navigation.setOptions({ title: name });
 
-    const q = query(collection(db, "messages"), orderBy("createdAt", "desc"))
-    // , where("uid", "==", userID));
-    const unsubMessages = onSnapshot(q, (docs) => {
-      let newMessages = [];
-      docs.forEach(doc => {
-        newMessages.push({ id: doc.id, ...doc.data() })
+    const messagesCollection = collection(db, "messages");
+    const q = query(messagesCollection, orderBy("createdAt", "desc"));
+
+    // Listen for changes in the messages collection
+    // and update the state with the latest messages
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const messages = querySnapshot.docs.map(doc => {
+        const firebaseData = doc.data();
+
+        const data = {
+          _id: doc.id,
+          text: firebaseData.text,
+          createdAt: new Date(firebaseData.createdAt.seconds * 1000),
+          user: firebaseData.user,
+        };
+
+        return data;
       });
-      setMessages(newMessages);
+
+      setMessages(messages);
     });
 
-    // Clean up code
-    return () => {
-      if (unsubMessages) unsubMessages();
-    }
-
-    // Set the initial messages
-  //   setMessages([
-  //     {
-  //       _id: 1,
-  //       text: "Hello developer",
-  //       createdAt: new Date(),
-  //       user: {
-  //         _id: 2,
-  //         name: "React Native",
-  //         avatar: "https://placeimg.com/140/140/any",
-  //       },
-  //     },
-
-  //     {
-  //       _id: 2,
-  //       text: "This is a system message",
-  //       createdAt: new Date(),
-  //       system: true,
-  //     },
-    // ]);
+    return unsubscribe;
   }, []);
 
+
+
   // Function to send messages
-  const onSend = (newMessages) => {
-    addDoc(collection(db, "messages"), newMessages[0])
+  // const onSend = (newMessages) => {
+  //   addDoc(collection(db, "messages"), newMessages[0])
     // setMessages((previousMessages) =>
     //   GiftedChat.append(previousMessages, newMessages)
-  };
+  // };
 
   // Render the messages in Bubbles
   const renderBubble = (props) => {
@@ -97,7 +99,11 @@ const Chat = ({ db, route, navigation }) => {
   return (
 
     // Background component & container wrapper
-    <Background> 
+    <Background
+    source={background ? null : image}
+    resizeMode="cover"
+    style={[styles.image, {backgroundColor: background} ]}>
+    
 
       <View style={styles.textContainer}>
         <GiftedChat
@@ -111,7 +117,8 @@ const Chat = ({ db, route, navigation }) => {
           accessibilityRole="button"
           onSend={(messages) => onSend(messages)}
           user={{
-            _id: 1,
+            _id: userID, // use the userID variable
+            name: route.params.name, // use the name from route params
           }}
         />
       </View>
@@ -127,6 +134,12 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
   },
+  image: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  }
+
 });
 
 export default Chat;
