@@ -2,7 +2,7 @@
 import Start from "./components/Start";
 import Chat from "./components/Chat";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 // import react Navigation
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -15,7 +15,7 @@ import {
   PROJECT_ID,
   STORAGE_BUCKET,
   MESSAGING_SENDER_ID,
-  APP_ID,
+  APP_ID
 } from "@env";
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeAuth, getReactNativePersistence } from "firebase/auth";
@@ -30,7 +30,7 @@ const firebaseConfig = {
   projectId: PROJECT_ID,
   storageBucket: STORAGE_BUCKET,
   messagingSenderId: MESSAGING_SENDER_ID,
-  appId: APP_ID,
+  appId: APP_ID
 };
 
 // Create the navigator
@@ -39,6 +39,7 @@ const App = () => {
   const [db, setDb] = useState(null);
 
   useEffect(() => {
+    // console.log("API_KEY", API_KEY);
 // Check if Firebase has already been initialized
     if (!getApps().length) {
     // Initialize Firebase

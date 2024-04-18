@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -32,7 +32,7 @@ const Start = ({ navigation }) => {
         Alert.alert("You have successfully signed in anonymously");
       })
       .catch((error) => {
-        console.error(error);
+        // console.error(error);
         Alert.alert("Unable to sign in, please try again");
       });
   };
