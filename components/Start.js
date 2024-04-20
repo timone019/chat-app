@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     borderColor: "white",
   },
   selectedColor: {
-    borderColor: "#FCD95B",
+    borderColor: "#007BFF",
     borderWidth: 3,
   },
 
