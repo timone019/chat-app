@@ -7,8 +7,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  View
-
+  View,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import Background from "./Background";
 import { getAuth, signInAnonymously } from "firebase/auth";
@@ -17,9 +18,24 @@ import { getAuth, signInAnonymously } from "firebase/auth";
 const Start = ({ navigation }) => {
   // State to hold the name input value
   const [name, setName] = useState("");
-  const auth = getAuth()
+  const auth = getAuth();
   // State to hold the chosen background color
   const [background, setBackground] = useState("");
+
+  // Color options
+  const colorOptions = ["#090C08", "#474056", "#8A95A5", "#B9C6AE"];
+
+  //* Color options plus function to handle button press
+  const ColorButton = ({ color, selected, onPress }) => (
+    <TouchableOpacity
+      style={[
+        styles.chooseColor,
+        { backgroundColor: color },
+        selected && styles.selectedColor,
+      ]}
+      onPress={onPress}
+    />
+  );
 
   const signInUser = () => {
     signInAnonymously(auth)
@@ -39,101 +55,93 @@ const Start = ({ navigation }) => {
 
   return (
     <Background color={background}>
-      <Text>Hello Start!</Text>
-      <TextInput
-        style={styles.textInput}
-        value={name}
-        onChangeText={setName}
-        placeholder="Type here ..."
-      />
-    <View style={styles.chooseColorBox}>
-          <Text style={styles.chooseColorText}>Choose Background Color:</Text>
-          <View style={styles.colorButtonsContainer}>
-            {/* Render a TouchableOpacity for each color option */}
-            <TouchableOpacity
-              style={[
-                styles.chooseColor,
-                { backgroundColor: "#090C08" },
-                background === "#090C08" && styles.selectedColor,
-              ]}
-              // Set the function to handle button press
-              onPress={() => setBackground("#090C08")}
-            ></TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.chooseColor,
-                { backgroundColor: "#474056" },
-                background === "#474056" && styles.selectedColor,
-              ]}
-              onPress={() => setBackground("#474056")}
-            ></TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.chooseColor,
-                { backgroundColor: "#8A95A5" },
-                background === "#8A95A5" && styles.selectedColor,
-              ]}
-              onPress={() => setBackground("#8A95A5")}
-            ></TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.chooseColor,
-                { backgroundColor: "#B9C6AE" },
-                background === "#B9C6AE" && styles.selectedColor,
-              ]}
-              onPress={() => setBackground("#B9C6AE")}
-            ></TouchableOpacity>
-          </View>
-        </View>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.container}>
+          <TextInput
+            style={styles.textInput}
+            value={name}
+            onChangeText={setName}
+            placeholder="Enter your name"
+          />
+          <TouchableOpacity
+            title="Go to Chat"
+            style={styles.button}
+            accessible={true}
+            accessibilityLabel="Go to Chat"
+            accessibilityHint="Navigates to Chat"
+            accessibilityRole="button"
+            onPress={signInUser}
+          >
+            <Text style={styles.buttonText}>Start Chat</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity
-        title="Go to Chat"
-        style={styles.button}
-        accessible={true}
-        accessibilityLabel="Go to Chat"
-        accessibilityHint="Navigates to Chat"
-        accessibilityRole="button"
-        onPress={signInUser}
-        // => { navigation.navigate("Chat", { name }) }
-      >
-        <Text style={styles.buttonText}>Start</Text>
-      </TouchableOpacity>
-      {Platform.OS === "ios" ? (
-        <KeyboardAvoidingView behavior="padding" />
-      ) : null}
-      {Platform.OS === "android" ? <KeyboardAvoidingView /> : null}
+          <Text style={styles.colorSelectText}>
+            Select your background color
+          </Text>
+
+          <View style={styles.colorButtonsContainer}>
+            {colorOptions.map((color) => (
+              <ColorButton
+                key={color}
+                color={color}
+                selected={background === color}
+                onPress={() => setBackground(color)}
+              />
+            ))}
+          </View>
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={() => setBackground(null)}
+          >
+            <Text style={styles.resetButtonText}>Reset Background</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableWithoutFeedback>
+      <KeyboardAvoidingView
+        behavior={Platform.select({ ios: "padding", android: undefined })}
+      />
     </Background>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    borderRadius: 10,
+    padding: 20,
+    margin: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   textInput: {
-    width: "88%",
+    width: 250,
     padding: 15,
     borderWidth: 1,
     borderRadius: 10,
     marginTop: 15,
-    marginBottom: 15,
+    marginBottom: 40,
     backgroundColor: "white",
+    alignSelf: "center",
   },
   button: {
     backgroundColor: "#007BFF",
     padding: 10,
     borderRadius: 8,
     marginTop: 10,
+    marginBottom: 20,
+    width: "50%", // set the width to 50% of the parent container
+    height: 40, // set the height to 40 pixels
+    alignSelf: "center", // center the button horizontally
   },
   buttonText: {
     color: "white",
     textAlign: "center",
   },
-  container: {
-    width: "88%",
-    height: "44%",
-    backgroundColor: "white",
-    alignItems: "center",
-    marginBottom: 20,
-    justifyContent: "space-evenly",
-    borderRadius: 4,
+  colorSelectText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#000000",
+    marginBottom: 10,
   },
   chooseColorBox: {
     width: "84%",
@@ -142,14 +150,16 @@ const styles = StyleSheet.create({
   },
   colorButtonsContainer: {
     flexDirection: "row",
-    alignSelf: "flex-start",
+    alignSelf: "center",
   },
   chooseColor: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 50,
+    height: 50,
+    borderRadius: 20,
     border: 3,
+    marginTop: 15,
     marginRight: 15,
+    marginBottom: 15,
     borderColor: "white",
   },
   selectedColor: {
@@ -164,6 +174,19 @@ const styles = StyleSheet.create({
     textAlign: "left",
     alignSelf: "flex-start",
     marginBottom: 10,
+  },
+  resetButton: {
+    backgroundColor: "#071422",
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+    width: "50%", // set the width to 50% of the parent container
+    height: 40, // set the height to 40 pixels
+    alignSelf: "center", // center the button horizontally
+  },
+  resetButtonText: {
+    color: "white",
+    textAlign: "center",
   },
 });
 
