@@ -62,7 +62,7 @@ const App = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Start">
-        <Stack.Screen name="Start" component={Start} />
+        <Stack.Screen name="Welcome" component={Start} />
         <Stack.Screen name="Chat">
           {(props) => <Chat {...props} db={db} />}
         </Stack.Screen>

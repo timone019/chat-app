@@ -72,7 +72,7 @@ const Start = ({ navigation }) => {
             accessibilityRole="button"
             onPress={signInUser}
           >
-            <Text style={styles.buttonText}>Start Chat</Text>
+            <Text style={styles.buttonText}>Enter Chat City</Text>
           </TouchableOpacity>
 
           <Text style={styles.colorSelectText}>

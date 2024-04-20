@@ -4,7 +4,6 @@ import {
   GiftedChat,
   Bubble,
   Day,
-  SystemMessage,
   InputToolbar,
 } from "react-native-gifted-chat";
 import Background from "./Background";
@@ -30,7 +29,6 @@ const Chat = ({ db, route, navigation }) => {
       },
     };
     addDoc(collection(db, "messages"), message);
-    return null; // add this line
   };
 
   // Set the title of the screen
@@ -96,11 +94,6 @@ const Chat = ({ db, route, navigation }) => {
     <Day {...props} textStyle={{ color: "white" }} />
   );
 
-  // style the system message to white
-  const renderSystemMessage = (props) => (
-    <SystemMessage {...props} textStyle={{ color: "white" }} />
-  );
-
   const renderInputToolbar = (props) => (
     <InputToolbar {...props} containerStyle={styles.inputToolbar}>
     </InputToolbar>
@@ -114,7 +107,6 @@ const Chat = ({ db, route, navigation }) => {
             messages={messages}
             renderBubble={renderBubble}
             renderDay={renderDay}
-            renderSystemMessage={renderSystemMessage}
             renderInputToolbar={renderInputToolbar}
             accessible={true}
             accessibilityLabel="send"
@@ -127,7 +119,6 @@ const Chat = ({ db, route, navigation }) => {
             }}
           />
         </View>
-        <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: undefined })} />
     </Background>
   );
 };
