@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Platform, KeyboardAvoidingView, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import {
   GiftedChat,
   Bubble,
@@ -14,9 +14,14 @@ import {
   addDoc,
   orderBy,
 } from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LogBox } from "react-native";
+LogBox.ignoreLogs(["AsyncStorage has been extracted from"]);
+
+
 
 // Chat component with route & navigation props
-const Chat = ({ db, route, navigation }) => {
+const Chat = ({ db, route, navigation, isConnected }) => {
   const [messages, setMessages] = useState([]);
   const { name, background, userID } = route.params; // extract userId and name from route params
 
@@ -31,8 +36,18 @@ const Chat = ({ db, route, navigation }) => {
     addDoc(collection(db, "messages"), message);
   };
 
+  let unsubscribe;
+
   // Set the title of the screen
   useEffect(() => {
+
+    if (isConnected === true) {
+
+      // unregister current onSnapshot() listener to avoid registering multiple listeners when
+      // useEffect code is re-executed.
+      if (unsubscribe) unsubscribe();
+      unsubscribe = null;
+
     navigation.setOptions({ title: name });
 
     const messagesCollection = collection(db, "messages");
@@ -40,9 +55,9 @@ const Chat = ({ db, route, navigation }) => {
 
     // Listen for changes in the messages collection
     // and update the state with the latest messages
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    unsubscribe = onSnapshot(q, (querySnapshot) => {
       const messages = querySnapshot.docs.map((doc) => {
-        const firebaseData = doc.data();
+        const firebaseData = doc.data(); 
 
         const data = {
           _id: doc.id,
@@ -53,19 +68,31 @@ const Chat = ({ db, route, navigation }) => {
 
         return data;
       });
-
+      cacheMessages(messages)
       setMessages(messages);
     });
+  } else loadCachedMessages();
+  
 
-    return unsubscribe;
-  }, []);
+    // Unregister the listener when the component unmounts
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [isConnected]);
 
-  // Function to send messages
-  // const onSend = (newMessages) => {
-  //   addDoc(collection(db, "messages"), newMessages[0])
-  // setMessages((previousMessages) =>
-  //   GiftedChat.append(previousMessages, newMessages)
-  // };
+   // load cached messages
+   const loadCachedMessages = async () => {
+    const cachedMessages = (await AsyncStorage.getItem("messages")) || [];
+    setMessages(JSON.parse(cachedMessages));
+  };
+
+  const cacheMessages = async (messagestoCache) => {
+    try {
+      await AsyncStorage.setItem("messages", JSON.stringify(messagestoCache));
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
 
   // Render the messages in Bubbles
   const renderBubble = (props) => {
@@ -94,14 +121,16 @@ const Chat = ({ db, route, navigation }) => {
     <Day {...props} textStyle={{ color: "white" }} />
   );
 
-  const renderInputToolbar = (props) => (
-    <InputToolbar {...props} containerStyle={styles.inputToolbar}>
-    </InputToolbar>
-  );
+  const renderInputToolbar = (props) => {
+    if (isConnected) return <InputToolbar {...props} containerStyle={styles.inputToolbar} />
+    else return null;
+  }
+
 
   return (
     // Background component & container wrapper
     <Background color={background}>
+          {(isConnected === true) ?
         <View style={styles.textContainer}>
           <GiftedChat
             messages={messages}
@@ -117,8 +146,12 @@ const Chat = ({ db, route, navigation }) => {
               _id: userID, // use the userID variable
               name: route.params.name, // use the name from route params
             }}
+
+
           />
-        </View>
+          
+        </View> : null
+        }
     </Background>
   );
 };
