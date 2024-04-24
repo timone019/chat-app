@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   GiftedChat,
@@ -18,14 +18,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LogBox } from "react-native";
 LogBox.ignoreLogs(["AsyncStorage has been extracted from"]);
 
-
-
 // Chat component with route & navigation props
 const Chat = ({ db, route, navigation, isConnected }) => {
   const [messages, setMessages] = useState([]);
   const { name, background, userID } = route.params; // extract userId and name from route params
 
-  const onSend = (newMessages) => {
+  // onSend function to send messages
+  const onSend = useCallback((newMessages = []) => {
     const message = {
       ...newMessages[0],
       user: {
@@ -34,65 +33,79 @@ const Chat = ({ db, route, navigation, isConnected }) => {
       },
     };
     addDoc(collection(db, "messages"), message);
-  };
+    setMessages((previousMessages) => GiftedChat.append(previousMessages, newMessages));
+  }, [userID, route.params.name, db]);
 
   let unsubscribe;
 
-  // Set the title of the screen
-  useEffect(() => {
-
-    if (isConnected === true) {
-
-      // unregister current onSnapshot() listener to avoid registering multiple listeners when
-      // useEffect code is re-executed.
-      if (unsubscribe) unsubscribe();
-      unsubscribe = null;
-
-    navigation.setOptions({ title: name });
-
-    const messagesCollection = collection(db, "messages");
-    const q = query(messagesCollection, orderBy("createdAt", "desc"));
-
-    // Listen for changes in the messages collection
-    // and update the state with the latest messages
-    unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const messages = querySnapshot.docs.map((doc) => {
-        const firebaseData = doc.data(); 
-
-        const data = {
-          _id: doc.id,
-          text: firebaseData.text,
-          createdAt: new Date(firebaseData.createdAt.seconds * 1000),
-          user: firebaseData.user,
-        };
-
-        return data;
-      });
-      cacheMessages(messages)
-      setMessages(messages);
-    });
-  } else loadCachedMessages();
-  
-
-    // Unregister the listener when the component unmounts
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [isConnected]);
-
-   // load cached messages
-   const loadCachedMessages = async () => {
-    const cachedMessages = (await AsyncStorage.getItem("messages")) || [];
-    setMessages(JSON.parse(cachedMessages));
-  };
-
+  // load cached messages
   const cacheMessages = async (messagestoCache) => {
     try {
       await AsyncStorage.setItem("messages", JSON.stringify(messagestoCache));
     } catch (error) {
       console.log(error.message);
     }
-  }
+  };
+
+  const loadCachedMessages = async () => {
+    const cachedMessages = await AsyncStorage.getItem("messages");
+    if (cachedMessages === null) {
+      setMessages([]);
+    } else {
+      setMessages(JSON.parse(cachedMessages));
+    }
+  };
+
+  // const loadCachedMessages = async () => {
+  //   const cachedMessages = (await AsyncStorage.getItem("messages")) || [];
+  //   setMessages(JSON.parse(cachedMessages));
+  // };
+  
+  // Load cached messages when the component mounts
+  useEffect(() => {
+    loadCachedMessages();
+  }, []);
+
+  // Set the title of the screen
+  useEffect(() => {
+    navigation.setOptions({ title: name });
+
+    if (isConnected) {
+      // unregister current onSnapshot() listener to avoid registering multiple listeners when
+      // useEffect code is re-executed.
+      if (unsubscribe) unsubscribe();
+      unsubscribe = null;
+
+      const messagesCollection = collection(db, "messages");
+      const q = query(messagesCollection, orderBy("createdAt", "desc"));
+
+      // Listen for changes in the messages collection
+      // and update the state with the latest messages
+      unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const messages = querySnapshot.docs.map((doc) => {
+          const firebaseData = doc.data();
+
+          const data = {
+            _id: doc.id,
+            text: firebaseData.text,
+            createdAt: new Date(firebaseData.createdAt.seconds * 1000),
+            user: firebaseData.user,
+          };
+
+          return data;
+        });
+        cacheMessages(messages);
+        setMessages(messages);
+      });
+    } else {
+    setTimeout(loadCachedMessages, 0); // Add a delay before calling loadCachedMessages
+    }
+    // Unregister the listener when the component unmounts
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [isConnected]);
+
 
   // Render the messages in Bubbles
   const renderBubble = (props) => {
@@ -122,15 +135,15 @@ const Chat = ({ db, route, navigation, isConnected }) => {
   );
 
   const renderInputToolbar = (props) => {
-    if (isConnected) return <InputToolbar {...props} containerStyle={styles.inputToolbar} />
+    if (isConnected)
+      return <InputToolbar {...props} containerStyle={styles.inputToolbar} />;
     else return null;
-  }
-
+  };
 
   return (
     // Background component & container wrapper
     <Background color={background}>
-          {(isConnected === true) ?
+     
         <View style={styles.textContainer}>
           <GiftedChat
             messages={messages}
@@ -141,17 +154,13 @@ const Chat = ({ db, route, navigation, isConnected }) => {
             accessibilityLabel="send"
             accessibilityHint="Sends a message"
             accessibilityRole="button"
-            onSend={(messages) => onSend(messages)}
+            onSend={isConnected ? onSend : undefined}
             user={{
               _id: userID, // use the userID variable
               name: route.params.name, // use the name from route params
             }}
-
-
           />
-          
-        </View> : null
-        }
+        </View>
     </Background>
   );
 };
@@ -164,8 +173,7 @@ const styles = StyleSheet.create({
   inputToolbar: {
     borderRadius: 20,
     marginHorizontal: 10,
-  }
-
+  },
 });
 
 export default Chat;
