@@ -7,6 +7,8 @@ import {
   InputToolbar,
 } from "react-native-gifted-chat";
 import Background from "./Background";
+import CustomActions from './CustomActions';
+import MapView from 'react-native-maps';
 import {
   onSnapshot,
   query,
@@ -19,7 +21,7 @@ import { LogBox } from "react-native";
 LogBox.ignoreLogs(["AsyncStorage has been extracted from"]);
 
 // Chat component with route & navigation props
-const Chat = ({ db, route, navigation, isConnected }) => {
+const Chat = ({ db, route, navigation, isConnected, storage }) => {
   const [messages, setMessages] = useState([]);
   const { name, background, userID } = route.params; // extract userId and name from route params
 
@@ -32,6 +34,12 @@ const Chat = ({ db, route, navigation, isConnected }) => {
         name: route.params.name, // use the name from route params
       },
     };
+      // image: imageURL,
+        // Check if the new message has an image
+  if (newMessages[0].image) {
+    message.image = newMessages[0].image;
+  }
+
     addDoc(collection(db, "messages"), message);
     setMessages((previousMessages) => GiftedChat.append(previousMessages, newMessages));
   }, [userID, route.params.name, db]);
@@ -60,7 +68,7 @@ const Chat = ({ db, route, navigation, isConnected }) => {
   //   const cachedMessages = (await AsyncStorage.getItem("messages")) || [];
   //   setMessages(JSON.parse(cachedMessages));
   // };
-  
+
   // Load cached messages when the component mounts
   useEffect(() => {
     loadCachedMessages();
@@ -92,13 +100,23 @@ const Chat = ({ db, route, navigation, isConnected }) => {
             user: firebaseData.user,
           };
 
+          if (firebaseData.image) {
+            data.image = firebaseData.image;
+          }
+
+              // If the message has a location, add it to the data object
+    if (firebaseData.location) {
+      data.location = firebaseData.location;
+    } else {
+      // If the message doesn't have a location, add a placeholder location
+      data.location = { latitude: 0, longitude: 0 };
+    }
+
           return data;
         });
         cacheMessages(messages);
         setMessages(messages);
       });
-    } else {
-    setTimeout(loadCachedMessages, 0); // Add a delay before calling loadCachedMessages
     }
     // Unregister the listener when the component unmounts
     return () => {
@@ -140,10 +158,37 @@ const Chat = ({ db, route, navigation, isConnected }) => {
     else return null;
   };
 
+  const renderCustomActions = (props) => {
+    return <CustomActions storage={storage} {...props} />;
+  };
+
+  const renderCustomView = (props) => {
+    const { currentMessage} = props;
+    if (currentMessage.location && currentMessage.location.latitude !== 0 && currentMessage.location.longitude !== 0) {
+      return (
+          <MapView
+            style={{width: 150,
+              height: 100,
+              borderRadius: 13,
+              margin: 3}}
+            region={{
+              latitude: currentMessage.location.latitude,
+              longitude: currentMessage.location.longitude,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            }}
+          />
+      );
+    }
+// Return null when the message doesn't have a location
+    return null;
+  }
+
+
   return (
     // Background component & container wrapper
     <Background color={background}>
-     
+
         <View style={styles.textContainer}>
           <GiftedChat
             messages={messages}
@@ -155,12 +200,17 @@ const Chat = ({ db, route, navigation, isConnected }) => {
             accessibilityHint="Sends a message"
             accessibilityRole="button"
             onSend={isConnected ? onSend : undefined}
+            renderActions={renderCustomActions}
+            renderCustomView={renderCustomView}
             user={{
               _id: userID, // use the userID variable
               name: route.params.name, // use the name from route params
             }}
           />
         </View>
+
+    
+
     </Background>
   );
 };

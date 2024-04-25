@@ -48,7 +48,6 @@ const Start = ({ navigation }) => {
         Alert.alert("You have successfully signed in anonymously");
       })
       .catch((error) => {
-        // console.error(error);
         Alert.alert("Unable to sign in, please try again");
       });
   };

@@ -24,6 +24,7 @@ import {
   disableNetwork,
   enableNetwork,
 } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 import { LogBox, Alert } from "react-native";
 LogBox.ignoreLogs(["AsyncStorage has been extracted from"]);
@@ -41,18 +42,20 @@ const firebaseConfig = {
 const Stack = createNativeStackNavigator();
 const App = () => {
   const [db, setDb] = useState(null);
+  const [storage, setStorage] = useState(null);
   // define new state of connection status
   const connectionStatus = useNetInfo();
 
   useEffect(() => {
-
+    if (db) {
     if (connectionStatus.isConnected === false) {
       Alert.alert("Connection Lost!");
       disableNetwork(db);
     } else if (connectionStatus.isConnected === true) {
       enableNetwork(db);
     }
-  }, [connectionStatus.isConnected]);
+    }
+  }, [connectionStatus.isConnected, db]);
 
   useEffect(() => {
     // Check if Firebase has already been initialized
@@ -61,7 +64,12 @@ const App = () => {
       const app = initializeApp(firebaseConfig);
       // Initialize Cloud Firestore and get a reference to the service
       const firestoreDb = getFirestore(app);
+      // const storage = getStorage(app);
       setDb(firestoreDb);
+
+      const firebaseStorage = getStorage(app);
+      setStorage(firebaseStorage);
+
 
       // Initialize Firebase Auth with AsyncStorage
       const auth = initializeAuth(app, {
@@ -84,6 +92,7 @@ const App = () => {
               {...props}
               isConnected={connectionStatus.isConnected}
               db={db}
+              storage={storage}
             />
           )}
         </Stack.Screen>
