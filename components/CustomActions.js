@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { TouchableOpacity, StyleSheet, Text, View, Alert } from "react-native";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 
+let location = null;
 const CustomActions = ({ wrapperStyle, iconTextStyle, onSend, storage, userID }) => {
   const actionSheet = useActionSheet();
 
@@ -34,19 +35,31 @@ const CustomActions = ({ wrapperStyle, iconTextStyle, onSend, storage, userID })
     }
   };
 
-  const getLocation = async () => {
+  const prefetchLocation = async () => {
     let permissions = await Location.requestForegroundPermissionsAsync();
     if (permissions?.granted) {
-      const location = await Location.getCurrentPositionAsync({});
-      if (location) {
-        onSend({
-          location: {
-            longitude: location.coords.longitude,
-            latitude: location.coords.latitude,
-          },
-        });
-      } else Alert.alert("Error occurred while fetching location");
-    } else Alert.alert("Permissions haven't been granted.");
+      location = await Location.getCurrentPositionAsync({});
+    }
+  };
+
+  useEffect(() => {
+    prefetchLocation();
+  }, []);
+
+  const getLocation = async () => {
+    if (!location) {
+      await prefetchLocation();
+    }
+    if (location) {
+      onSend({
+        location: {
+          longitude: location.coords.longitude,
+          latitude: location.coords.latitude,
+        },
+      });
+    } else {
+      Alert.alert("Error occurred while fetching location");
+    }
   };
 
   const onActionPress = () => {
@@ -84,10 +97,8 @@ const CustomActions = ({ wrapperStyle, iconTextStyle, onSend, storage, userID })
     const response = await fetch(imageURI);
     const blob = await response.blob();
     uploadBytes(newUploadRef, blob).then((snapshot) => {
-      console.log(snapshot); // Log the snapshot object to check if the upload was successful
       getDownloadURL(snapshot.ref)
         .then((url) => {
-          console.log(url); // Log the URL to check if it's correctly retrieved
           onSend({ image: url });
         })
         .catch((error) => {
