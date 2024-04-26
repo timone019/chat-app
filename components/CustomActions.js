@@ -1,21 +1,29 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { TouchableOpacity, StyleSheet, Text, View, Alert } from "react-native";
-import { useActionSheet } from "@expo/react-native-action-sheet";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadBytes, getDownloadURL } from "firebase/storage";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
+import { useActionSheet } from '@expo/react-native-action-sheet';
+import { MessageContext } from "./MessageContext";
+import * as Clipboard from 'expo-clipboard';
+// let location = null;
+const CustomActions = React.forwardRef((props, ref) => {
+  const {
+    wrapperStyle,
+    iconTextStyle,
+    onSend,
+    storage,
+    userID,
+  } = props; 
 
-let location = null;
-const CustomActions = ({ wrapperStyle, iconTextStyle, onSend, storage, userID }) => {
   const actionSheet = useActionSheet();
-
+  const { messages, deleteMessage } = useContext(MessageContext);
 
   const generateReference = (uri) => {
-    const timeStamp = (new Date()).getTime();
+    const timeStamp = new Date().getTime();
     const imageName = uri.split("/")[uri.split("/").length - 1];
     return `${userID}-${timeStamp}-${imageName}`;
-  }
-
+  };
 
   const pickImage = async () => {
     let permissions = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -24,7 +32,7 @@ const CustomActions = ({ wrapperStyle, iconTextStyle, onSend, storage, userID })
       if (!result.canceled) await uploadAndSendImage(result.assets[0].uri);
       else Alert.alert("Permissions haven't been granted.");
     }
-  }
+  };
 
   const takePhoto = async () => {
     let permissions = await ImagePicker.requestCameraPermissionsAsync();
@@ -35,21 +43,41 @@ const CustomActions = ({ wrapperStyle, iconTextStyle, onSend, storage, userID })
     }
   };
 
-  const prefetchLocation = async () => {
-    let permissions = await Location.requestForegroundPermissionsAsync();
-    if (permissions?.granted) {
-      location = await Location.getCurrentPositionAsync({});
-    }
+  const [loading, setLoading] = useState(false);
+  const [location, setLocation] = useState(null);
+  const prefetchLocation = () => {
+    return new Promise(async (resolve, reject) => {
+      setLoading(true);
+      let permissions = await Location.requestForegroundPermissionsAsync();
+      if (permissions?.granted) {
+        try {
+          let loc = await Location.getCurrentPositionAsync({}).catch(
+            async () => {
+              // If getCurrentPositionAsync fails, use getLastKnownPositionAsync
+              return await Location.getLastKnownPositionAsync({});
+            }
+          );
+          setLocation(loc);
+          setLoading(false);
+          resolve(loc);
+        } catch (error) {
+          console.error(error);
+          setLoading(false);
+          reject(error);
+        }
+      } else {
+        setLoading(false);
+        Alert.alert("Location Permissions haven't been granted.");
+        reject(new Error("Location Permissions haven't been granted."));
+      }
+    });
   };
 
-  useEffect(() => {
-    prefetchLocation();
-  }, []);
+  // useEffect(() => {
+  //   prefetchLocation();
+  // }, []);
 
   const getLocation = async () => {
-    if (!location) {
-      await prefetchLocation();
-    }
     if (location) {
       onSend({
         location: {
@@ -58,7 +86,26 @@ const CustomActions = ({ wrapperStyle, iconTextStyle, onSend, storage, userID })
         },
       });
     } else {
-      Alert.alert("Error occurred while fetching location");
+      fetchLocation();
+    }
+  };
+
+  const fetchLocation = async () => {
+    setLoading(true); // Set loading to true if location is null
+    try {
+      let loc = await prefetchLocation(onSend);
+      if (loc) {
+        onSend({
+          location: {
+            longitude: loc.coords.longitude,
+            latitude: loc.coords.latitude,
+          },
+        });
+      } else {
+        Alert.alert("Error occurred while fetching location");
+      }
+    } catch (error) {
+      // Handle error
     }
   };
 
@@ -102,10 +149,52 @@ const CustomActions = ({ wrapperStyle, iconTextStyle, onSend, storage, userID })
           onSend({ image: url });
         })
         .catch((error) => {
-          console.error(error); // Log any errors that occur when getting the download URL
+          // Handle error
         });
     });
   };
+
+  useEffect(() => {
+    ref.current = {
+      onLongPressMessageOptions: (context, currentMessage) => {
+        let options = ["Cancel"];
+        let actions = [];
+  
+        if (currentMessage.text) {
+          options.unshift("Copy Text");
+          actions.unshift(() => Clipboard.setStringAsync(currentMessage.text));
+        }
+  
+        if (currentMessage.image) {
+          options.unshift("Copy Image");
+          actions.unshift(() => Clipboard.setStringAsync(currentMessage.image));
+        }
+  
+        if (currentMessage.location && currentMessage.location.latitude && currentMessage.location.longitude) {
+          options.unshift("Copy Location");
+          actions.unshift(() => Clipboard.setStringAsync(`Latitude: ${currentMessage.location.latitude}, Longitude: ${currentMessage.location.longitude}`));
+        }
+  
+        options.unshift("Delete");
+        actions.unshift(() => deleteMessage(currentMessage));
+  
+        const cancelButtonIndex = options.length - 1;
+  
+        actionSheet.showActionSheetWithOptions(
+          {
+            options,
+            cancelButtonIndex,
+          },
+          (buttonIndex) => {
+            if (buttonIndex !== cancelButtonIndex) {
+              actions[buttonIndex]();
+            }
+          }
+        );
+      },
+    };
+  }, []);
+      
 
   return (
     <TouchableOpacity style={styles.container} onPress={onActionPress}>
@@ -114,7 +203,7 @@ const CustomActions = ({ wrapperStyle, iconTextStyle, onSend, storage, userID })
       </View>
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

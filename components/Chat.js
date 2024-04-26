@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   GiftedChat,
   Bubble,
   Day,
   InputToolbar,
+  Message
 } from "react-native-gifted-chat";
 import Background from "./Background";
 import CustomActions from './CustomActions';
@@ -21,7 +22,7 @@ import { LogBox } from "react-native";
 LogBox.ignoreLogs(["AsyncStorage has been extracted from"]);
 
 // Chat component with route & navigation props
-const Chat = ({ db, route, navigation, isConnected, storage }) => {
+const Chat = ({ db, route, navigation, isConnected, storage, props }) => {
   const [messages, setMessages] = useState([]);
   const { name, background, userID } = route.params; // extract userId and name from route params
 
@@ -143,6 +144,9 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
             color: "#FFFFFF",
           },
         }}
+        onLongPress={(context, currentMessage) => {
+          customActionsRef.current.onLongPressMessageOptions(context, currentMessage);
+        }}
       />
     );
   };
@@ -158,8 +162,21 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
     else return null;
   };
 
+  const renderMessage = (props) => {
+    return (
+      <Message
+        {...props}
+        onLongPress={(context, message) => {
+          // Call the onLongPressMessageOptions function from the CustomActions component
+          customActionsRef.current.onLongPressMessageOptions(context, () => {}, message);
+        }}
+      />
+    );
+  };
+
+  const customActionsRef = useRef();
   const renderCustomActions = (props) => {
-    return <CustomActions storage={storage} {...props} />;
+    return <CustomActions ref={customActionsRef} storage={storage} {...props} />;
   };
 
   const renderCustomView = (props) => {
@@ -202,6 +219,7 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
             onSend={isConnected ? onSend : undefined}
             renderActions={renderCustomActions}
             renderCustomView={renderCustomView}
+            renderMessage={renderMessage}
             user={{
               _id: userID, // use the userID variable
               name: route.params.name, // use the name from route params

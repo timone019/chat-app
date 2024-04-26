@@ -25,6 +25,7 @@ import {
   enableNetwork,
 } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { MessageProvider } from "./components/MessageContext";
 
 import { LogBox, Alert } from "react-native";
 LogBox.ignoreLogs(["AsyncStorage has been extracted from"]);
@@ -48,12 +49,12 @@ const App = () => {
 
   useEffect(() => {
     if (db) {
-    if (connectionStatus.isConnected === false) {
-      Alert.alert("Connection Lost!");
-      disableNetwork(db);
-    } else if (connectionStatus.isConnected === true) {
-      enableNetwork(db);
-    }
+      if (connectionStatus.isConnected === false) {
+        Alert.alert("Connection Lost!");
+        disableNetwork(db);
+      } else if (connectionStatus.isConnected === true) {
+        enableNetwork(db);
+      }
     }
   }, [connectionStatus.isConnected, db]);
 
@@ -70,7 +71,6 @@ const App = () => {
       const firebaseStorage = getStorage(app);
       setStorage(firebaseStorage);
 
-
       // Initialize Firebase Auth with AsyncStorage
       const auth = initializeAuth(app, {
         persistence: getReactNativePersistence(AsyncStorage),
@@ -83,21 +83,23 @@ const App = () => {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Start">
-        <Stack.Screen name="Welcome" component={Start} />
-        <Stack.Screen name="Chat">
-          {(props) => (
-            <Chat
-              {...props}
-              isConnected={connectionStatus.isConnected}
-              db={db}
-              storage={storage}
-            />
-          )}
-        </Stack.Screen>
-      </Stack.Navigator>
-    </NavigationContainer>
+    <MessageProvider db={db}>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName="Start">
+          <Stack.Screen name="Welcome" component={Start} />
+          <Stack.Screen name="Chat">
+            {(props) => (
+              <Chat
+                {...props}
+                isConnected={connectionStatus.isConnected}
+                db={db}
+                storage={storage}
+              />
+            )}
+          </Stack.Screen>
+        </Stack.Navigator>
+      </NavigationContainer>
+    </MessageProvider>
   );
 };
 
