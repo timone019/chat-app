@@ -70,65 +70,6 @@ const CustomActions = React.forwardRef((props, ref) => {
 
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState(null);
-  const prefetchLocation = () => {
-    return new Promise(async (resolve, reject) => {
-      setLoading(true);
-      let permissions = await Location.requestForegroundPermissionsAsync();
-      if (permissions?.granted) {
-        try {
-          let loc = await Location.getCurrentPositionAsync({}).catch(
-            async () => {
-              // If getCurrentPositionAsync fails, use getLastKnownPositionAsync
-              return await Location.getLastKnownPositionAsync({});
-            }
-          );
-          setLocation(loc);
-          setLoading(false);
-          resolve(loc);
-        } catch (error) {
-          console.error(error);
-          setLoading(false);
-          reject(error);
-        }
-      } else {
-        setLoading(false);
-        Alert.alert("Location Permissions haven't been granted.");
-        reject(new Error("Location Permissions haven't been granted."));
-      }
-    });
-  };
-
-  const getLocation = async () => {
-    if (location) {
-      onSend({
-        location: {
-          longitude: location.coords.longitude,
-          latitude: location.coords.latitude,
-        },
-      });
-    } else {
-      fetchLocation();
-    }
-  };
-
-  const fetchLocation = async () => {
-    setLoading(true); // Set loading to true if location is null
-    try {
-      let loc = await prefetchLocation(onSend);
-      if (loc) {
-        onSend({
-          location: {
-            longitude: loc.coords.longitude,
-            latitude: loc.coords.latitude,
-          },
-        });
-      } else {
-        Alert.alert("Error occurred while fetching location");
-      }
-    } catch (error) {
-      // Handle error
-    }
-  };
 
   const onActionPress = () => {
     const options = [
@@ -158,6 +99,96 @@ const CustomActions = React.forwardRef((props, ref) => {
       }
     );
   };
+  
+  const prefetchLocation = () => {
+    return new Promise(async (resolve, reject) => {
+      setLoading(true);
+      let permissions = await Location.requestForegroundPermissionsAsync();
+      if (permissions?.granted) {
+        try {
+          let loc = await Location.getCurrentPositionAsync({}).catch(
+            async () => {
+              // If getCurrentPositionAsync fails, use getLastKnownPositionAsync
+              return await Location.getLastKnownPositionAsync({});
+            }
+          );
+          setLocation(loc);
+          setLoading(false);
+          resolve(loc);
+        } catch (error) {
+          console.error(error);
+          setLoading(false);
+          reject(error);
+        }
+      } else {
+        setLoading(false);
+        Alert.alert("Location Permissions haven't been granted.");
+        reject(new Error("Location Permissions haven't been granted."));
+      }
+    });
+  };
+
+
+  const fetchLocation = async () => {
+    setLoading(true); // Set loading to true if location is null
+    try {
+      let loc = await prefetchLocation(onSend);
+      if (loc) {
+        Alert.alert(
+          "Send Location",
+          "Are you sure you want to send this location?",
+          [
+            {
+              text: "Cancel",
+              style: "cancel"
+            },
+            {
+              text: "OK",
+              onPress: () => onSend({ 
+                location: {
+                  longitude: loc.coords.longitude,
+                  latitude: loc.coords.latitude,
+                },
+              })
+            }
+          ]
+        );
+      } else {
+        Alert.alert("Error occurred while fetching location");
+      }
+    } catch (error) {
+      // Handle error
+    }
+    setLoading(false);
+  };
+
+  const getLocation = async () => {
+    if (location) {
+      Alert.alert(
+        "Send Location",
+        "Are you sure you want to send this location?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel"
+          },
+          {
+            text: "OK",
+            onPress: () => onSend({ 
+              location: {
+                longitude: location.coords.longitude,
+                latitude: location.coords.latitude,
+          },
+        })
+          }
+        ]
+      );
+    } else {
+      fetchLocation();
+    }
+  };
+
+
 
   useEffect(() => {
     ref.current = {
