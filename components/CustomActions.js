@@ -14,6 +14,8 @@ const CustomActions = React.forwardRef((props, ref) => {
     onSend,
     storage,
     userID,
+    setIsSelectionMode,
+    toggleMessageSelection,
   } = props; 
 
   const actionSheet = useActionSheet();
@@ -70,6 +72,10 @@ const CustomActions = React.forwardRef((props, ref) => {
 
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState(null);
+
+
+  
+
 
   const onActionPress = () => {
     const options = [
@@ -210,12 +216,18 @@ const CustomActions = React.forwardRef((props, ref) => {
           options.unshift("Copy Location");
           actions.unshift(() => Clipboard.setStringAsync(`Latitude: ${currentMessage.location.latitude}, Longitude: ${currentMessage.location.longitude}`));
         }
-  
+        
         options.unshift("Delete");
         actions.unshift(() => deleteMessage(currentMessage));
+
+        options.unshift("Select Messages");
+        actions.unshift(() => {
+          setIsSelectionMode(true);
+          toggleMessageSelection(currentMessage);
+        });
   
         const cancelButtonIndex = options.length - 1;
-  
+
         actionSheet.showActionSheetWithOptions(
           {
             options,

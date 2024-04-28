@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, Button } from "react-native";
 import {
   GiftedChat,
   Bubble,
   Day,
   InputToolbar,
-  Message
+  Message,
 } from "react-native-gifted-chat";
 import Background from "./Background";
-import CustomActions from './CustomActions';
-import MapView from 'react-native-maps';
+import CustomActions from "./CustomActions";
+import MapView from "react-native-maps";
 import {
   onSnapshot,
   query,
@@ -18,6 +18,10 @@ import {
   orderBy,
 } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import { useContext } from 'react';
+import { MessageContext } from './MessageContext';
+
 import { LogBox } from "react-native";
 LogBox.ignoreLogs(["AsyncStorage has been extracted from"]);
 
@@ -25,24 +29,47 @@ LogBox.ignoreLogs(["AsyncStorage has been extracted from"]);
 const Chat = ({ db, route, navigation, isConnected, storage }) => {
   const [messages, setMessages] = useState([]);
   const { name, background, userID } = route.params; // extract userId and name from route params
+  const [selectedMessages, setSelectedMessages] = useState(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const { deleteMessage } = useContext(MessageContext);
+
+  const toggleMessageSelection = (message) => {
+    if (selectedMessages.has(message)) {
+      selectedMessages.delete(message);
+    } else {
+      selectedMessages.add(message);
+    }
+    setSelectedMessages(new Set(selectedMessages));
+  };
+
+  const deleteSelectedMessages = () => {
+    selectedMessages.forEach((message) => deleteMessage(message));
+    setSelectedMessages(new Set());
+    setIsSelectionMode(false);
+  };
 
   // onSend function to send messages
-  const onSend = useCallback((newMessages = []) => {
-    const message = {
-      ...newMessages[0],
-      user: {
-        _id: userID, // use the userId variable
-        name: route.params.name, // use the name from route params
-      },
-    };
-        // Check if the new message has an image
-  if (newMessages[0].image) {
-    message.image = newMessages[0].image;
-  }
+  const onSend = useCallback(
+    (newMessages = []) => {
+      const message = {
+        ...newMessages[0],
+        user: {
+          _id: userID, // use the userId variable
+          name: route.params.name, // use the name from route params
+        },
+      };
+      // Check if the new message has an image
+      if (newMessages[0].image) {
+        message.image = newMessages[0].image;
+      }
 
-    addDoc(collection(db, "messages"), message);
-    setMessages((previousMessages) => GiftedChat.append(previousMessages, newMessages));
-  }, [userID, route.params.name, db]);
+      addDoc(collection(db, "messages"), message);
+      setMessages((previousMessages) =>
+        GiftedChat.append(previousMessages, newMessages)
+      );
+    },
+    [userID, route.params.name, db]
+  );
 
   let unsubscribe;
 
@@ -104,13 +131,13 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
             data.image = firebaseData.image;
           }
 
-              // If the message has a location, add it to the data object
-    if (firebaseData.location) {
-      data.location = firebaseData.location;
-    } else {
-      // If the message doesn't have a location, add a placeholder location
-      data.location = { latitude: 0, longitude: 0 };
-    }
+          // If the message has a location, add it to the data object
+          if (firebaseData.location) {
+            data.location = firebaseData.location;
+          } else {
+            // If the message doesn't have a location, add a placeholder location
+            data.location = { latitude: 0, longitude: 0 };
+          }
 
           return data;
         });
@@ -123,7 +150,6 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
       if (unsubscribe) unsubscribe();
     };
   }, [isConnected]);
-
 
   // Render the messages in Bubbles
   const renderBubble = (props) => {
@@ -144,7 +170,10 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
           },
         }}
         onLongPress={(context, currentMessage) => {
-          customActionsRef.current.onLongPressMessageOptions(context, currentMessage);
+          customActionsRef.current.onLongPressMessageOptions(
+            context,
+            currentMessage
+          );
         }}
       />
     );
@@ -167,7 +196,11 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
         {...props}
         onLongPress={(context, message) => {
           // Call the onLongPressMessageOptions function from the CustomActions component
-          customActionsRef.current.onLongPressMessageOptions(context, () => {}, message);
+          customActionsRef.current.onLongPressMessageOptions(
+            context,
+            () => {},
+            message
+          );
         }}
       />
     );
@@ -175,59 +208,60 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
 
   const customActionsRef = useRef();
   const renderCustomActions = (props) => {
-    return <CustomActions ref={customActionsRef} storage={storage} {...props} />;
+    return (
+      <CustomActions ref={customActionsRef} storage={storage}  setIsSelectionMode={setIsSelectionMode} toggleMessageSelection={toggleMessageSelection} {...props} />
+    );
   };
 
   const renderCustomView = (props) => {
-    const { currentMessage} = props;
-    if (currentMessage.location && currentMessage.location.latitude !== 0 && currentMessage.location.longitude !== 0) {
+    const { currentMessage } = props;
+    if (
+      currentMessage.location &&
+      currentMessage.location.latitude !== 0 &&
+      currentMessage.location.longitude !== 0
+    ) {
       return (
-          <MapView
-            style={{width: 150,
-              height: 100,
-              borderRadius: 13,
-              margin: 3}}
-            region={{
-              latitude: currentMessage.location.latitude,
-              longitude: currentMessage.location.longitude,
-              latitudeDelta: 0.0922,
-              longitudeDelta: 0.0421,
-            }}
-          />
+        <MapView
+          style={{ width: 150, height: 100, borderRadius: 13, margin: 3 }}
+          region={{
+            latitude: currentMessage.location.latitude,
+            longitude: currentMessage.location.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          }}
+        />
       );
     }
-// Return null when the message doesn't have a location
+    // Return null when the message doesn't have a location
     return null;
-  }
-
+  };
 
   return (
     // Background component & container wrapper
     <Background color={background}>
-
-        <View style={styles.textContainer}>
-          <GiftedChat
-            messages={messages}
-            renderBubble={renderBubble}
-            renderDay={renderDay}
-            renderInputToolbar={renderInputToolbar}
-            accessible={true}
-            accessibilityLabel="send"
-            accessibilityHint="Sends a message"
-            accessibilityRole="button"
-            onSend={isConnected ? onSend : undefined}
-            renderActions={renderCustomActions}
-            renderCustomView={renderCustomView}
-            renderMessage={renderMessage}
-            user={{
-              _id: userID, // use the userID variable
-              name: route.params.name, // use the name from route params
-            }}
-          />
-        </View>
-
-    
-
+      <View style={styles.textContainer}>
+        {isSelectionMode && (
+          <Button title="Delete Selected" onPress={deleteSelectedMessages} />
+        )}
+        <GiftedChat
+          messages={messages}
+          renderBubble={renderBubble}
+          renderDay={renderDay}
+          renderInputToolbar={renderInputToolbar}
+          accessible={true}
+          accessibilityLabel="send"
+          accessibilityHint="Sends a message"
+          accessibilityRole="button"
+          onSend={isConnected ? onSend : undefined}
+          renderActions={renderCustomActions}
+          renderCustomView={renderCustomView}
+          renderMessage={renderMessage}
+          user={{
+            _id: userID, // use the userID variable
+            name: route.params.name, // use the name from route params
+          }}
+        />
+      </View>
     </Background>
   );
 };
