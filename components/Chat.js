@@ -22,7 +22,7 @@ import { LogBox } from "react-native";
 LogBox.ignoreLogs(["AsyncStorage has been extracted from"]);
 
 // Chat component with route & navigation props
-const Chat = ({ db, route, navigation, isConnected, storage, props }) => {
+const Chat = ({ db, route, navigation, isConnected, storage }) => {
   const [messages, setMessages] = useState([]);
   const { name, background, userID } = route.params; // extract userId and name from route params
 
@@ -35,7 +35,6 @@ const Chat = ({ db, route, navigation, isConnected, storage, props }) => {
         name: route.params.name, // use the name from route params
       },
     };
-      // image: imageURL,
         // Check if the new message has an image
   if (newMessages[0].image) {
     message.image = newMessages[0].image;

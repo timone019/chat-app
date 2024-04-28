@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useContext } from "react";
 import { TouchableOpacity, StyleSheet, Text, View, Alert } from "react-native";
-import { uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadBytes, getDownloadURL, ref as storageRef } from "firebase/storage";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { MessageContext } from "./MessageContext";
 import * as Clipboard from 'expo-clipboard';
-// let location = null;
+
 const CustomActions = React.forwardRef((props, ref) => {
   const {
     wrapperStyle,
@@ -25,6 +25,26 @@ const CustomActions = React.forwardRef((props, ref) => {
     return `${userID}-${timeStamp}-${imageName}`;
   };
 
+  const uploadAndSendImage = async (imageURI) => {
+    try {
+      const uniqueRefString = generateReference(imageURI);
+      const newUploadRef = storageRef(storage, uniqueRefString);
+      const response = await fetch(imageURI);
+      const blob = await response.blob();
+      uploadBytes(newUploadRef, blob).then((snapshot) => {
+        getDownloadURL(snapshot.ref)
+          .then((url) => {
+            onSend({ image: url });
+          })
+          .catch((error) => {
+            Alert.alert("An error occurred while getting the download URL.");
+          });
+      });
+    } catch (error) {
+      Alert.alert("An error occurred while uploading and sending the image.");
+    }
+  }
+
   const pickImage = async () => {
     let permissions = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissions?.granted) {
@@ -32,16 +52,21 @@ const CustomActions = React.forwardRef((props, ref) => {
       if (!result.canceled) await uploadAndSendImage(result.assets[0].uri);
       else Alert.alert("Permissions haven't been granted.");
     }
-  };
+  }
 
   const takePhoto = async () => {
-    let permissions = await ImagePicker.requestCameraPermissionsAsync();
-    if (permissions?.granted) {
-      let result = await ImagePicker.launchCameraAsync();
-      if (!result.canceled) await uploadAndSendImage(result.assets[0].uri);
-      else Alert.alert("Permissions haven't been granted.");
+    try {
+      let permissions = await ImagePicker.requestCameraPermissionsAsync();
+      if (permissions?.granted) {
+        let result = await ImagePicker.launchCameraAsync();
+        if (!result.canceled) await uploadAndSendImage(result.assets[0].uri);
+        else Alert.alert("Permissions haven't been granted.");
+      }
+    } catch (error) {
+      Alert.alert("An error occurred while taking a photo.");
     }
   };
+
 
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState(null);
@@ -72,10 +97,6 @@ const CustomActions = React.forwardRef((props, ref) => {
       }
     });
   };
-
-  // useEffect(() => {
-  //   prefetchLocation();
-  // }, []);
 
   const getLocation = async () => {
     if (location) {
@@ -136,22 +157,6 @@ const CustomActions = React.forwardRef((props, ref) => {
         }
       }
     );
-  };
-
-  const uploadAndSendImage = async (imageURI) => {
-    const uniqueRefString = generateReference(imageURI);
-    const newUploadRef = ref(storage, uniqueRefString);
-    const response = await fetch(imageURI);
-    const blob = await response.blob();
-    uploadBytes(newUploadRef, blob).then((snapshot) => {
-      getDownloadURL(snapshot.ref)
-        .then((url) => {
-          onSend({ image: url });
-        })
-        .catch((error) => {
-          // Handle error
-        });
-    });
   };
 
   useEffect(() => {
