@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { StyleSheet, View, Share } from "react-native";
+import React, { useEffect, useState, useCallback, useRef  } from "react";
+import { StyleSheet, View, Share, Alert, Text, TouchableOpacity, ScrollView } from "react-native";
 import {
   GiftedChat,
   Bubble,
@@ -33,6 +33,7 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
   const [selectedMessages, setSelectedMessages] = useState(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const { deleteMessage } = useContext(MessageContext);
+  const giftedChatRef = useRef(null);
 
   const toggleMessageSelection = (message) => {
     if (selectedMessages.has(message)) {
@@ -52,9 +53,24 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
   };
 
   const deleteSelectedMessages = () => {
-    selectedMessages.forEach((message) => deleteMessage(message));
-    setSelectedMessages(new Set());
-    setIsSelectionMode(false);
+    Alert.alert(
+      "Delete Messages",
+      "Are you sure you want to delete the selected messages?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        { 
+          text: "OK", 
+          onPress: () => {
+            selectedMessages.forEach((message) => deleteMessage(message));
+            setSelectedMessages(new Set());
+            setIsSelectionMode(false);
+          } 
+        }
+      ]
+    );
   };
 
   const onShare = async () => {
@@ -120,11 +136,6 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
     }
   };
 
-  // const loadCachedMessages = async () => {
-  //   const cachedMessages = (await AsyncStorage.getItem("messages")) || [];
-  //   setMessages(JSON.parse(cachedMessages));
-  // };
-
   // Load cached messages when the component mounts
   useEffect(() => {
     loadCachedMessages();
@@ -189,7 +200,7 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
             name={selectedMessages.size === messages.length ? 'check-square' : 'square-o'} 
             type='font-awesome' 
             onPress={selectAllMessages} 
-            color="#841584"
+            color="#007AFF"
             containerStyle={{ marginRight: 10 }}
           />
         ),
@@ -244,18 +255,18 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
               name="trash"
               type="font-awesome"
               onPress={deleteSelectedMessages}
-              color="#841584"
+              color="#007AFF"
             />
             <Icon
               name="share"
               type="font-awesome"
-              color="#841584"
+              color="#007AFF"
               onPress={onShare}
             />
             <Icon
               name="arrow-left"
               type="font-awesome"
-              color="#841584"
+              color="#007AFF"
               onPress={() => setIsSelectionMode(false)}
             />
 
@@ -280,8 +291,8 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
             checkedIcon="check-circle-o"
             uncheckedIcon="circle-o"
             iconType="font-awesome"
-            checkedColor="#0a2d51"
-            uncheckedColor="#841584"
+            checkedColor="#007AFF"
+            uncheckedColor="#007AFF"
           />
         )}
         <Message
@@ -350,6 +361,7 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
     <Background color={background}>
       <View style={styles.textContainer}>
         <GiftedChat
+          ref={giftedChatRef}
           messages={messages}
           renderBubble={renderBubble}
           renderDay={renderDay}
