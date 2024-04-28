@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { StyleSheet, View, Button } from "react-native";
+import { StyleSheet, View, Share } from "react-native";
 import {
   GiftedChat,
   Bubble,
@@ -19,8 +19,9 @@ import {
 } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { useContext } from 'react';
-import { MessageContext } from './MessageContext';
+import { useContext } from "react";
+import { MessageContext } from "./MessageContext";
+import { CheckBox, Icon } from "react-native-elements";
 
 import { LogBox } from "react-native";
 LogBox.ignoreLogs(["AsyncStorage has been extracted from"]);
@@ -42,10 +43,38 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
     setSelectedMessages(new Set(selectedMessages));
   };
 
+  const selectAllMessages = () => {
+    if (selectedMessages.size === messages.length) {
+      setSelectedMessages(new Set());
+    } else {
+      setSelectedMessages(new Set(messages));
+    }
+  };
+
   const deleteSelectedMessages = () => {
     selectedMessages.forEach((message) => deleteMessage(message));
     setSelectedMessages(new Set());
     setIsSelectionMode(false);
+  };
+
+  const onShare = async () => {
+    try {
+      const result = await Share.share({
+        message: "Share this message",
+      });
+
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          // shared with activity type of result.activityType
+        } else {
+          // shared
+        }
+      } else if (result.action === Share.dismissedAction) {
+        // dismissed
+      }
+    } catch (error) {
+      alert(error.message);
+    }
   };
 
   // onSend function to send messages
@@ -151,6 +180,28 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
     };
   }, [isConnected]);
 
+  useEffect(() => {
+    if (isSelectionMode) {
+      navigation.setOptions({
+        title: name,
+        headerRight: () => (
+          <Icon 
+            name={selectedMessages.size === messages.length ? 'check-square' : 'square-o'} 
+            type='font-awesome' 
+            onPress={selectAllMessages} 
+            color="#841584"
+            containerStyle={{ marginRight: 10 }}
+          />
+        ),
+      });
+    } else {
+      navigation.setOptions({
+        title: name,
+        headerRight: null,
+      });
+    }
+  }, [navigation, selectAllMessages, isSelectionMode, selectedMessages, messages]);
+
   // Render the messages in Bubbles
   const renderBubble = (props) => {
     return (
@@ -185,31 +236,89 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
   );
 
   const renderInputToolbar = (props) => {
-    if (isConnected)
-      return <InputToolbar {...props} containerStyle={styles.inputToolbar} />;
-    else return null;
+    if (isConnected) {
+      if (isSelectionMode) {
+        return (
+          <View style={styles.selectionContainer}>
+            <Icon
+              name="trash"
+              type="font-awesome"
+              onPress={deleteSelectedMessages}
+              color="#841584"
+            />
+            <Icon
+              name="share"
+              type="font-awesome"
+              color="#841584"
+              onPress={onShare}
+            />
+            <Icon
+              name="arrow-left"
+              type="font-awesome"
+              color="#841584"
+              onPress={() => setIsSelectionMode(false)}
+            />
+
+          </View>
+        );
+      } else {
+        return <InputToolbar {...props} containerStyle={styles.inputToolbar} />;
+      }
+    } else {
+      return null;
+    }
   };
 
   const renderMessage = (props) => {
+    const isCurrentUser = props.currentMessage.user._id === userID;
     return (
-      <Message
-        {...props}
-        onLongPress={(context, message) => {
-          // Call the onLongPressMessageOptions function from the CustomActions component
-          customActionsRef.current.onLongPressMessageOptions(
-            context,
-            () => {},
-            message
-          );
-        }}
-      />
+      <View>
+        {isSelectionMode && (
+          <CheckBox
+            checked={selectedMessages.has(props.currentMessage)}
+            onPress={() => toggleMessageSelection(props.currentMessage)}
+            checkedIcon="check-circle-o"
+            uncheckedIcon="circle-o"
+            iconType="font-awesome"
+            checkedColor="#0a2d51"
+            uncheckedColor="#841584"
+          />
+        )}
+        <Message
+          {...props}
+          wrapperStyle={{
+            left: {
+              backgroundColor: "#b73eeb",
+              marginRight: isSelectionMode ? 10 : 0,
+            },
+            right: {
+              backgroundColor: "#007AFF",
+              marginLeft: isSelectionMode ? 10 : 0,
+            },
+          }}
+          onLongPress={(context, message) => {
+            // Call the onLongPressMessageOptions function from the CustomActions component
+            customActionsRef.current.onLongPressMessageOptions(
+              context,
+              () => setIsSelectionMode(true),
+              message
+            );
+          }}
+        />
+      </View>
     );
   };
 
   const customActionsRef = useRef();
   const renderCustomActions = (props) => {
     return (
-      <CustomActions ref={customActionsRef} storage={storage}  setIsSelectionMode={setIsSelectionMode} toggleMessageSelection={toggleMessageSelection} {...props} />
+      <CustomActions
+        ref={customActionsRef}
+        storage={storage}
+        setIsSelectionMode={setIsSelectionMode}
+        toggleMessageSelection={toggleMessageSelection}
+        {...props}
+      />
     );
   };
 
@@ -240,9 +349,6 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
     // Background component & container wrapper
     <Background color={background}>
       <View style={styles.textContainer}>
-        {isSelectionMode && (
-          <Button title="Delete Selected" onPress={deleteSelectedMessages} />
-        )}
         <GiftedChat
           messages={messages}
           renderBubble={renderBubble}
@@ -274,6 +380,13 @@ const styles = StyleSheet.create({
   inputToolbar: {
     borderRadius: 20,
     marginHorizontal: 10,
+  },
+  selectionContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 10,
   },
 });
 
