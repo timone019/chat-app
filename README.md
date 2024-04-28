@@ -23,6 +23,7 @@ As the world goes mobile, we're right there with it! From shopping to scheduling
 - **Engaging Interface:** Enjoy our user-friendly conversation page, complete with an input field and submit button.
 - **More than Words:** Our chat lets you express yourself with images and location data, in addition to text.
 - **Always Available:** Your data is stored both online and offline for uninterrupted access.
+- **Tap & Hold to Delete or Copy:** Industry Standard ability to tap & hold to delete or copy messages.
 
 ## Tech Stack
 
