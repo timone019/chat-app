@@ -1,4 +1,10 @@
-# Mobile Chat App: Your Ultimate Communication Companion!
+# Chat City - Mobile Chat App: Your Ultimate Communication Companion!
+
+![Chat City](https://github.com/timone019/chat-app/assets/143154960/c46f065e-f47a-46ce-bfa8-9f404a280e0f)
+
+![Start Screen](./assets/StartScreen.png)
+
+![Chat Screen](./assets/ChatScreen.png)
 
 ## Mission
 
@@ -23,7 +29,9 @@ As the world goes mobile, we're right there with it! From shopping to scheduling
 - **Engaging Interface:** Enjoy our user-friendly conversation page, complete with an input field and submit button.
 - **More than Words:** Our chat lets you express yourself with images and location data, in addition to text.
 - **Always Available:** Your data is stored both online and offline for uninterrupted access.
-- **Tap & Hold to Delete or Copy:** Industry Standard ability to tap & hold to delete or copy messages.
+- **Tap & Hold to Copy or Select with All option to Delete with Share feature:** Industry Standard ability to tap & hold to delete or copy messages.
+
+
 
 ## Tech Stack
 
@@ -38,3 +46,25 @@ As the world goes mobile, we're right there with it! From shopping to scheduling
 - **Location Data:** Share your location via the chat in a map view.
 - **Gifted Chat Library:** We use this library to create our chat interface and functionality.
 - **Well-Documented:** Our codebase is thoroughly commented for easy understanding.
+
+## Setup Instructions
+
+Follow these steps to get the app running on your local machine:
+
+1. **Clone the repository:** Use the command https://github.com/timone019/chat-app.gitt to clone the repository to your local machine.
+
+2. **Navigate to the project directory:** Use the command `cd your-repo-name` to navigate into the root directory of the project.
+
+3. **Install Node.js and npm:** If you don't have Node.js and npm installed, you can download them from [here](https://nodejs.org/en/download/).
+
+4. **Install Expo CLI:** Use the command `npm install -g expo-cli` to install Expo CLI globally on your machine.
+
+5. **Install dependencies:** Use the command `npm install` to install all the necessary dependencies for the project.
+
+6. **Start the app:** Use the command `npm start` or `expo start` to start the app. This will open a new browser window with the Expo developer tools.
+
+7. **Run the app on your device/emulator:** You can either use an Android/iOS emulator or directly run the app on your mobile device using the Expo Go app. Scan the QR code displayed in the Expo developer tools with the Expo Go app to run the app on your device.
+
+Please note that you'll need to have the Expo Go app installed on your device to run the app. You can download it from the [App Store](https://apps.apple.com/app/apple-store/id982107779) or [Google Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent&referrer=www).
+
+Remember to replace `your-repo-name` with the actual URL and name of your repository.

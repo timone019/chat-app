@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useCallback, useRef  } from "react";
-import { StyleSheet, View, Share, Alert, Text, TouchableOpacity, ScrollView } from "react-native";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { StyleSheet, View, Share, Alert } from "react-native";
 import {
   GiftedChat,
   Bubble,
-  Day,
   InputToolbar,
   Message,
 } from "react-native-gifted-chat";
@@ -16,6 +15,9 @@ import {
   collection,
   addDoc,
   orderBy,
+  endBefore,
+  limit,
+  getDocs,
 } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -33,7 +35,117 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
   const [selectedMessages, setSelectedMessages] = useState(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const { deleteMessage } = useContext(MessageContext);
-  const giftedChatRef = useRef(null);
+  const [isLoadingEarlier, setIsLoadingEarlier] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+
+  const fetchEarlierMessages = async (currentMessages) => {
+    let q;
+    const messagesCollection = collection(db, "messages");
+
+    if (currentMessages.length === 0) {
+      // If there are no current messages, fetch the latest messages
+      // Query Firestore for messages that were created before the earliest message currently loaded
+      q = query(
+        messagesCollection,
+        orderBy("createdAt", "desc"),
+        limit(20) // Fetch the 20 messages before the earliest message
+      );
+    } else {
+      // If there are current messages, fetch messages that were created before the earliest message
+      // Get the timestamp of the earliest message currently loaded
+      const earliestMessageTimestamp =
+        currentMessages[currentMessages.length - 1].createdAt;
+      q = query(
+        messagesCollection,
+        orderBy("createdAt", "desc"),
+        endBefore(earliestMessageTimestamp),
+        limit(20)
+      );
+    }
+
+    // Execute the query and map the results to the message format used in the app
+    const querySnapshot = await getDocs(q);
+    const earlierMessages = querySnapshot.docs.map((doc) => {
+      const firebaseData = doc.data();
+
+      const data = {
+        _id: doc.id,
+        text: firebaseData.text,
+        createdAt: new Date(firebaseData.createdAt.seconds * 1000),
+        user: firebaseData.user,
+      };
+
+      if (firebaseData.image) {
+        data.image = firebaseData.image;
+      }
+
+      if (firebaseData.location) {
+        data.location = firebaseData.location;
+      } else {
+        data.location = { latitude: 0, longitude: 0 };
+      }
+
+      return data;
+    });
+
+    // If the number of messages fetched is less than the limit, set hasMoreMessages to false
+    if (earlierMessages.length < 20) {
+      setHasMoreMessages(false);
+    }
+
+    return earlierMessages;
+  };
+
+  const mergeMessages = (currentMessages, earlierMessages) => {
+    const messageMap = new Map();
+    [...currentMessages, ...earlierMessages].forEach((message) => {
+      messageMap.set(message._id, message);
+    });
+    return Array.from(messageMap.values());
+  };
+
+  const handleLoadEarlier = async () => {
+    // if (!hasMoreMessages) {
+    //   Alert.alert("No more messages", "You have loaded all messages.");
+    //   return;
+    // }
+    setIsLoadingEarlier(true);
+    const earlierMessages = await fetchEarlierMessages(messages);
+    if (earlierMessages.length === 0) {
+      setHasMoreMessages(false);
+    } else {
+      setMessages((previousMessages) =>
+        mergeMessages(previousMessages, earlierMessages)
+      );
+    }
+    setIsLoadingEarlier(false);
+  };
+
+  const handleLongPress = (context, currentMessage) => {
+    if (customActionsRef.current) {
+      customActionsRef.current.onLongPressMessageOptions(
+        context,
+        currentMessage
+      );
+    }
+  };
+
+  const isCloseToTop = ({ layoutMeasurement, contentOffset, contentSize }) => {
+    const paddingToTop = 80;
+    return (
+      contentSize.height - layoutMeasurement.height - paddingToTop <=
+      contentOffset.y
+    );
+  };
+
+  useEffect(() => {
+    const fetchInitialMessages = async () => {
+      const initialMessages = await fetchEarlierMessages([]);
+      setMessages(initialMessages);
+    };
+
+    fetchInitialMessages();
+  }, []);
 
   const toggleMessageSelection = (message) => {
     if (selectedMessages.has(message)) {
@@ -59,16 +171,16 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
       [
         {
           text: "Cancel",
-          style: "cancel"
+          style: "cancel",
         },
-        { 
-          text: "OK", 
+        {
+          text: "OK",
           onPress: () => {
             selectedMessages.forEach((message) => deleteMessage(message));
             setSelectedMessages(new Set());
             setIsSelectionMode(false);
-          } 
-        }
+          },
+        },
       ]
     );
   };
@@ -116,7 +228,6 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
     [userID, route.params.name, db]
   );
 
-  let unsubscribe;
 
   // load cached messages
   const cacheMessages = async (messagestoCache) => {
@@ -140,6 +251,8 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
   useEffect(() => {
     loadCachedMessages();
   }, []);
+
+  let unsubscribe;
 
   // Set the title of the screen
   useEffect(() => {
@@ -196,10 +309,14 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
       navigation.setOptions({
         title: name,
         headerRight: () => (
-          <Icon 
-            name={selectedMessages.size === messages.length ? 'check-square' : 'square-o'} 
-            type='font-awesome' 
-            onPress={selectAllMessages} 
+          <Icon
+            name={
+              selectedMessages.size === messages.length
+                ? "check-square"
+                : "square-o"
+            }
+            type="font-awesome"
+            onPress={selectAllMessages}
             color="#007AFF"
             containerStyle={{ marginRight: 10 }}
           />
@@ -211,7 +328,13 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
         headerRight: null,
       });
     }
-  }, [navigation, selectAllMessages, isSelectionMode, selectedMessages, messages]);
+  }, [
+    navigation,
+    selectAllMessages,
+    isSelectionMode,
+    selectedMessages,
+    messages,
+  ]);
 
   // Render the messages in Bubbles
   const renderBubble = (props) => {
@@ -231,20 +354,15 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
             color: "#FFFFFF",
           },
         }}
-        onLongPress={(context, currentMessage) => {
-          customActionsRef.current.onLongPressMessageOptions(
-            context,
-            currentMessage
-          );
-        }}
+        onLongPress={handleLongPress}
       />
     );
   };
 
-  // style the date to white
-  const renderDay = (props) => (
-    <Day {...props} textStyle={{ color: "white" }} />
-  );
+  // // style the date to white
+  // const renderDay = (props) => (
+  //   <Day {...props} textStyle={{ color: "white" }} />
+  // );
 
   const renderInputToolbar = (props) => {
     if (isConnected) {
@@ -269,7 +387,6 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
               color="#007AFF"
               onPress={() => setIsSelectionMode(false)}
             />
-
           </View>
         );
       } else {
@@ -307,14 +424,7 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
               marginLeft: isSelectionMode ? 10 : 0,
             },
           }}
-          onLongPress={(context, message) => {
-            // Call the onLongPressMessageOptions function from the CustomActions component
-            customActionsRef.current.onLongPressMessageOptions(
-              context,
-              () => setIsSelectionMode(true),
-              message
-            );
-          }}
+          onLongPress={handleLongPress}
         />
       </View>
     );
@@ -361,10 +471,20 @@ const Chat = ({ db, route, navigation, isConnected, storage }) => {
     <Background color={background}>
       <View style={styles.textContainer}>
         <GiftedChat
-          ref={giftedChatRef}
+          loadEarlier={hasMoreMessages && !isLoadingEarlier} // This shows the "Load Earlier Messages" button
+          onLoadEarlier={handleLoadEarlier} // This function is called when the "Load Earlier Messages" button is pressed
+          isLoadingEarlier={isLoadingEarlier} // This shows a loading indicator when earlier messages are being fetched
+          listViewProps={{
+            scrollEventThrottle: 400,
+            onScroll: ({ nativeEvent }) => {
+              if (isCloseToTop(nativeEvent)) {
+                handleLoadEarlier();
+              }
+            },
+          }}
           messages={messages}
           renderBubble={renderBubble}
-          renderDay={renderDay}
+          // renderDay={renderDay}
           renderInputToolbar={renderInputToolbar}
           accessible={true}
           accessibilityLabel="send"

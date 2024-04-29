@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useContext } from "react";
-import { TouchableOpacity, StyleSheet, Text, View, Alert } from "react-native";
+import { TouchableOpacity, StyleSheet, View, Alert } from "react-native";
 import { uploadBytes, getDownloadURL, ref as storageRef } from "firebase/storage";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { MessageContext } from "./MessageContext";
 import * as Clipboard from 'expo-clipboard';
+import { Icon } from 'react-native-elements'
 
 const CustomActions = React.forwardRef((props, ref) => {
   const {
     wrapperStyle,
-    iconTextStyle,
     onSend,
     storage,
     userID,
@@ -217,8 +217,8 @@ const CustomActions = React.forwardRef((props, ref) => {
           actions.unshift(() => Clipboard.setStringAsync(`Latitude: ${currentMessage.location.latitude}, Longitude: ${currentMessage.location.longitude}`));
         }
         
-        options.unshift("Delete");
-        actions.unshift(() => deleteMessage(currentMessage));
+        // options.unshift("Delete");
+        // actions.unshift(() => deleteMessage(currentMessage));
 
         options.unshift("Select Messages");
         actions.unshift(() => {
@@ -247,7 +247,7 @@ const CustomActions = React.forwardRef((props, ref) => {
   return (
     <TouchableOpacity style={styles.container} onPress={onActionPress}>
       <View style={[styles.wrapper, wrapperStyle]}>
-        <Text style={[styles.iconText, iconTextStyle]}>+</Text>
+      <Icon name='add' type='material' color="#b2b2b2" size={24} style={{ paddingTop: -8, paddingLeft: -8 }}/>
       </View>
     </TouchableOpacity>
   );
