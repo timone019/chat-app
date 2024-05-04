@@ -51,7 +51,7 @@ As the world goes mobile, we're right there with it! From shopping to scheduling
 
 Follow these steps to get the app running on your local machine:
 
-1. **Clone the repository:** Use the command https://github.com/timone019/chat-app.gitt to clone the repository to your local machine.
+1. **Clone the repository:** Use the command https://github.com/timone019/chat-app.git to clone the repository to your local machine.
 
 2. **Navigate to the project directory:** Use the command `cd your-repo-name` to navigate into the root directory of the project.
 
