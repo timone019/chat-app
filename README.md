@@ -61,7 +61,7 @@ Follow these steps to get the app running on your local machine:
 
 5. **Install dependencies:** Use the command `npm install` to install all the necessary dependencies for the project.
 
-6. **Start the app:** Use the command `npm start` or `expo start` to start the app. This will open a new browser window with the Expo developer tools.
+6. **Start the app:** Use the command `npx expo start` or `npm start` or `expo start` to start the app. This will open a new browser window with the Expo developer tools.
 
 7. **Run the app on your device/emulator:** You can either use an Android/iOS emulator or directly run the app on your mobile device using the Expo Go app. Scan the QR code displayed in the Expo developer tools with the Expo Go app to run the app on your device.
 
